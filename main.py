@@ -27,7 +27,10 @@ model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
 
+print(model_names)
+
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+# chosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn']
 parser.add_argument('--arch', '-a', metavar='ARCH', default='epsanet50',
                     choices=model_names,
                     help='model architecture: ' +
@@ -247,7 +250,7 @@ def main():
     if not os.path.exists(directory):
         os.makedirs(directory)
     
-    # 创建一个 SummaryWriter 对象
+    # create a SummaryWriter object
     writer_dir = directory + "/log/"
     if not os.path.exists(writer_dir):
         os.makedirs(writer_dir)

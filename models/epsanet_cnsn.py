@@ -78,12 +78,22 @@ class EPSABlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+        
+        # insert cnsn
+        crop=None
+        beta=1
+        crossnorm = CrossNorm(crop=crop, beta=beta)
+        # using cn
+        self.cnsn = CNSN(crossnorm=crossnorm, selfnorm=False)
 
     def forward(self, x):
-        # x.shape: torch.Size([128, 64, 8, 8])
         identity = x
         
-        # out.shape: torch.Size([128, 64, 8, 8])
+        # before conv1 using cn
+        x = self.cnsn(x)
+        
+        # import pdb ; pdb.set_trace()
+
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
@@ -161,11 +171,11 @@ class EPSANet(nn.Module):
         return x
 
 
-def epsanet50():
+def epsanet50_cn():
     model = EPSANet(EPSABlock, [3, 4, 6, 3], num_classes=10)
     return model
 
-def epsanet101():
+def epsanet101_cn():
     model = EPSANet(EPSABlock, [3, 4, 23, 3], num_classes=10)
     return model
 
