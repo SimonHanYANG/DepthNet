@@ -30,7 +30,8 @@ model_names = sorted(name for name in models.__dict__
 print(model_names)
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-# chosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn']
+# choosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn']
+# choosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn', 'respsacsattnet101', 'respsacsattnet18', 'respsacsattnet50']
 parser.add_argument('--arch', '-a', metavar='ARCH', default='epsanet50',
                     choices=model_names,
                     help='model architecture: ' +
@@ -48,6 +49,8 @@ parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=64, type=int,
                     metavar='N', help='mini-batch size (default: 64)')
+parser.add_argument('--nc', '--num-classes', default=100, type=int,
+                    metavar='NC', help='number of classes (default: 100 for cifar100)')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -104,14 +107,17 @@ def main():
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size)
 
+    num_class = args.nc
+    print("Number of classes: " + str(num_class))
+    
     # create model
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
-        model = models.__dict__[args.arch]()
+        model = models.__dict__[args.arch](num_class)
     else:
         print("=> creating model '{}'".format(args.arch))
 
-    model = models.__dict__[args.arch]()
+    model = models.__dict__[args.arch](num_class)
 
     if args.gpu is not None:
         model = model.cuda(args.gpu)
@@ -139,6 +145,9 @@ def main():
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
+    
+    # lr adapt change
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     # optionally resume from a checkpoint
     if args.resume:
@@ -311,6 +320,7 @@ def main():
         print(time_value)
         print("-" * 80)
         writer.close()
+        # scheduler.step()
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer):

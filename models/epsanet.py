@@ -161,11 +161,11 @@ class EPSANet(nn.Module):
         return x
 
 
-def epsanet50():
-    model = EPSANet(EPSABlock, [3, 4, 6, 3], num_classes=10)
+def epsanet50(num_classes):
+    model = EPSANet(EPSABlock, [3, 4, 6, 3], num_classes=num_classes)
     return model
 
-def epsanet101():
-    model = EPSANet(EPSABlock, [3, 4, 23, 3], num_classes=10)
+def epsanet101(num_classes):
+    model = EPSANet(EPSABlock, [3, 4, 23, 3], num_classes=num_classes)
     return model
 

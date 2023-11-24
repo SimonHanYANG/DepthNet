@@ -93,9 +93,10 @@ To train models on CIFAR with 8 gpus run:
 --dataset Category of using dataset
 --action Other Action (for log root name suffix)
 --data Download Dataset in this FilePath
+--nc Number of classes
 ```
 ```
-CUDA_VISIBLE_DEVICES=0,1 python main.py -a epsanet50 -b 256 --dataset cifar100 --action cifar100 --data ./dataset_cifar100
+CUDA_VISIBLE_DEVICES=0,1 python main.py -a epsanet50 -b 256 --dataset cifar100 --action cifar100 --data ./dataset_cifar100 --nc 100
 ```
 
 ## Traing Visualization
