@@ -1,4 +1,7 @@
 dataset/
+sperm-depth/
+cellData/
+cellDataBackup/
+dataset_cifar10/
 dataset_cifar100/
 runs/
-dataset_cifar10/

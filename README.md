@@ -96,7 +96,11 @@ To train models on CIFAR with 8 gpus run:
 --nc Number of classes
 ```
 ```
+# cifia for original epsanet(only with psa module)
 CUDA_VISIBLE_DEVICES=0,1 python main.py -a epsanet50 -b 256 --dataset cifar100 --action cifar100 --data ./dataset_cifar100 --nc 100
+
+# sperm data for hannet
+CUDA_VISIBLE_DEVICES=0,1 python main.py -a hannet50 -b 256 --dataset sperm --action sperm_hannet50 --data ./cellData --nc 9
 ```
 
 ## Traing Visualization

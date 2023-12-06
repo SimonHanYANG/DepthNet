@@ -22,6 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 import models
 from cifar import CIFAR10Dataset
 from cifar100 import CIFAR100Dataset
+from CellDataset import CellDataset
 
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
@@ -32,6 +33,7 @@ print(model_names)
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # choosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn']
 # choosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn', 'respsacsattnet101', 'respsacsattnet18', 'respsacsattnet50']
+# ['alexnet', 'conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn', 'hannet101', 'hannet18', 'hannet34', 'hannet50', 'make_layer', 'mobilenetv2', 'resnet101', 'resnet18', 'resnet34', 'resnet50', 'respsacsattnet101', 'respsacsattnet18', 'respsacsattnet50', 'vgg16', 'vgg19']
 parser.add_argument('--arch', '-a', metavar='ARCH', default='epsanet50',
                     choices=model_names,
                     help='model architecture: ' +
@@ -43,7 +45,7 @@ parser.add_argument('--dataset', metavar='DATASET', default='cifar10',
                     help="categroy of dataset")
 parser.add_argument('-j', '--workers', default=10, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=120, type=int, metavar='N',
+parser.add_argument('--epochs', default=250, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -140,7 +142,7 @@ def main():
 
     # define loss function (criterion) and optimizer
     # criterion = CrossEntropyLabelSmooth(num_classes=1000, epsilon=0.1)
-    criterion = CrossEntropyLabelSmooth(num_classes=10, epsilon=0.1)
+    criterion = CrossEntropyLabelSmooth(num_classes=num_class, epsilon=0.1)
 
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                 momentum=args.momentum,
@@ -167,7 +169,40 @@ def main():
     cudnn.benchmark = True
 
     # Data loading code
-    if args.dataset == "cifar10":
+    if args.dataset == "sperm":
+        # using --data ./cellData/
+        
+        transform = transforms.Compose([
+            # image size: (96, 96)
+            transforms.Resize((96, 96)),  # 将所有图像调整为同一大小 (96, 96)
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+        
+        # './cellData/train'
+        traindir = os.path.join(args.data, 'train')
+        # './cellData/val'
+        valdir = os.path.join(args.data, 'val')
+
+        # create train/val dataset
+        train_dataset = CellDataset(root_dir=traindir, transform=transform)
+        val_dataset = CellDataset(root_dir=valdir, transform=transform)
+        
+        
+        if args.distributed:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        else:
+            train_sampler = None
+            
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+                                                   num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+                                                 num_workers=args.workers, pin_memory=True)
+        
+        
+    elif args.dataset == "cifar10":
+        # using --data ./dataset_cifar10/
+
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -187,7 +222,10 @@ def main():
                                                    num_workers=args.workers, pin_memory=True, sampler=train_sampler)
         val_loader = torch.utils.data.DataLoader(val_datset, batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.workers, pin_memory=True)
+        
     elif args.dataset == "cifar100":
+        # using --data ./dataset_cifar100/
+
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -207,6 +245,7 @@ def main():
                                                    num_workers=args.workers, pin_memory=True, sampler=train_sampler)
         val_loader = torch.utils.data.DataLoader(val_datset, batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.workers, pin_memory=True)
+
     else:
         traindir = os.path.join(args.data, 'train')
         valdir = os.path.join(args.data, 'val')
@@ -335,6 +374,9 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
 
     end = time.time()
     for i, (input, target) in enumerate(train_loader):
+        # input: torch.Size([bs, 3, 32, 32])
+        # target: torch.Size([bs])
+        
         # measure data loading time
         data_time.update(time.time() - end)
 
