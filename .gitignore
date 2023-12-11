@@ -5,3 +5,6 @@ cellDataBackup/
 dataset_cifar10/
 dataset_cifar100/
 runs/
+human_sperm_data/
+hs_data/
+hs73_data/

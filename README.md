@@ -101,6 +101,9 @@ CUDA_VISIBLE_DEVICES=0,1 python main.py -a epsanet50 -b 256 --dataset cifar100 -
 
 # sperm data for hannet
 CUDA_VISIBLE_DEVICES=0,1 python main.py -a hannet50 -b 256 --dataset sperm --action sperm_hannet50 --data ./cellData --nc 9
+
+# real sperm depth data classification
+CUDA_VISIBLE_DEVICES=0,1 python main.py -a hannet50 -b 256 --dataset hs73 --action attention_h73 --data ./hs73_data/ --nc 9 --saf True
 ```
 
 ## Traing Visualization

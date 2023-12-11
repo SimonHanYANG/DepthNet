@@ -156,9 +156,9 @@ def hannet101(num_classes):
 '''
 Ablation experiment:
 
-1. w/o channelSpatial Attention -- EPSANet
+1. w/o channelSpatial Attention -- {EPSANet and hannet}
 
-2. w/o SEWeight -- PSAModule {this hannet and respsacsattnet50}
+2. w/o SEWeight -- PSAModule {respsacsattnet50 and hannet}
 
 3. channel + spatial att or spatial + channel (optional)
 

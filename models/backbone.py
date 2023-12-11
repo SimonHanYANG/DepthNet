@@ -19,6 +19,10 @@ from .efficientnet import *
 
 from .densenet import *
 
+from .shufflenet_psa import *
+
+from .efficientnet_psa import *
+
 # too much conv for cifia10
 def alexnet(num_classes):
     # Load the not pretrained model
@@ -118,6 +122,26 @@ def shufflenet_v2_x2_0(num_classes):
 
     return model
 
+def shufflenet_v2_x0_5(num_classes):
+    model = Shufflenet_v2_x0_5_att(num_classes=num_classes)
+
+    return model
+
+def shufflenet_v2_x1_0(num_classes):
+    model = Shufflenet_v2_x1_0_att(num_classes=num_classes)
+
+    return model
+
+def shufflenet_v2_x1_5(num_classes):
+    model = Shufflenet_v2_x1_5_att(num_classes=num_classes)
+
+    return model
+
+def shufflenet_v2_x2_0(num_classes):
+    model = Shufflenet_v2_x2_0_att(num_classes=num_classes)
+
+    return model
+
 def efficientb0(num_classes):
     # EfficientNet-B0
     model_b0 = EfficientB0(num_classes=num_classes)
@@ -144,6 +168,35 @@ def efficientb3(num_classes):
 def efficientb4(num_classes):
     # EfficientNet-B4
     model_b4 = EfficientB4(num_classes=num_classes)
+
+    return model_b4
+
+def efficientb0(num_classes):
+    # EfficientNet-B0
+    model_b0 = EfficientB0_att(num_classes=num_classes)
+
+    return model_b0
+
+def efficientb1(num_classes):
+    # EfficientNet-B1
+    model_b1 = EfficientB1_att(num_classes=num_classes)
+    
+    return model_b1
+
+def efficientb2(num_classes):
+    # EfficientNet-B2
+    model_b2 = EfficientB2_att(num_classes=num_classes)
+    return model_b2
+
+def efficientb3(num_classes):
+    # EfficientNet-B3
+    model_b3 = EfficientB3_att(num_classes=num_classes)
+
+    return model_b3
+
+def efficientb4(num_classes):
+    # EfficientNet-B4
+    model_b4 = EfficientB4_att(num_classes=num_classes)
 
     return model_b4
 

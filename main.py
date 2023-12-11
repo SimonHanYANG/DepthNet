@@ -4,6 +4,8 @@ import random
 import shutil
 import time
 import warnings
+import numpy as np
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -16,6 +18,10 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from loss import CrossEntropyLabelSmooth
+from torchvision.utils import make_grid
+import torch.nn.functional as F
+
+from models.hannet import *
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -33,7 +39,11 @@ print(model_names)
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # choosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn']
 # choosenable: ['conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn', 'respsacsattnet101', 'respsacsattnet18', 'respsacsattnet50']
-# ['alexnet', 'conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 'epsanet50_cn', 'hannet101', 'hannet18', 'hannet34', 'hannet50', 'make_layer', 'mobilenetv2', 'resnet101', 'resnet18', 'resnet34', 'resnet50', 'respsacsattnet101', 'respsacsattnet18', 'respsacsattnet50', 'vgg16', 'vgg19']
+# ['alexnet', 'conv', 'conv1x1', 'epsanet101', 'epsanet101_cn', 'epsanet50', 
+# 'epsanet50_cn', 'hannet101', 'hannet18', 'hannet34', 'hannet50', 
+# 'make_layer', 'mobilenetv2', 'resnet101', 'resnet18', 'resnet34', 
+# 'resnet50', 'respsacsattnet101', 'respsacsattnet18', 'respsacsattnet50', 
+# 'vgg16', 'vgg19']
 parser.add_argument('--arch', '-a', metavar='ARCH', default='epsanet50',
                     choices=model_names,
                     help='model architecture: ' +
@@ -79,11 +89,18 @@ parser.add_argument('--gpu', default=None, type=int,
                     help='GPU id to use.')
 parser.add_argument('--action', default='', type=str,
                     help='other information.')
+parser.add_argument('--saf', '--saveattentionfig', default=False, type=bool,
+                    help='path to latest checkpoint (default: none)')
 
 best_prec1 = 0
 best_prec5 = 0
 best_epoch = 0
 
+
+import torch
+import matplotlib.pyplot as plt
+import os
+import numpy as np
 
 def main():
     global args, best_prec1
@@ -169,8 +186,110 @@ def main():
     cudnn.benchmark = True
 
     # Data loading code
-    if args.dataset == "sperm":
-        # using --data ./cellData/
+    if args.dataset == "hs73":
+        # using --data ./hs73_data/ --dataset hs73
+        
+        transform = transforms.Compose([
+            # image size: (96, 96)
+            transforms.Resize((96, 96)),  # 将所有图像调整为同一大小 (96, 96)
+            # transforms.RandomHorizontalFlip(),  # 随机水平翻转图像
+            # transforms.RandomVerticalFlip(),  # 随机垂直翻转图像
+            # transforms.RandomRotation(10),  # 在 (-10, 10) 范围内随机旋转图像
+            # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # 随机改变图像的亮度、对比度、饱和度和色相
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+        
+        # './cellData/train'
+        traindir = os.path.join(args.data, 'train')
+        # './cellData/val'
+        valdir = os.path.join(args.data, 'eval')
+
+        # create train/val dataset
+        train_dataset = CellDataset(root_dir=traindir, transform=transform)
+        val_dataset = CellDataset(root_dir=valdir, transform=transform)
+        
+        
+        if args.distributed:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        else:
+            train_sampler = None
+            
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+                                                   num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+                                                 num_workers=args.workers, pin_memory=True)
+
+    elif args.dataset == "hs101":
+        # using --data ./hs_data/ --dataset hs101
+        
+        transform = transforms.Compose([
+            # image size: (96, 96)
+            transforms.Resize((96, 96)),  # 将所有图像调整为同一大小 (96, 96)
+            # transforms.RandomHorizontalFlip(),  # 随机水平翻转图像
+            # transforms.RandomVerticalFlip(),  # 随机垂直翻转图像
+            # transforms.RandomRotation(10),  # 在 (-10, 10) 范围内随机旋转图像
+            # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # 随机改变图像的亮度、对比度、饱和度和色相
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+        
+        # './cellData/train'
+        traindir = os.path.join(args.data, 'train')
+        # './cellData/val'
+        valdir = os.path.join(args.data, 'eval')
+
+        # create train/val dataset
+        train_dataset = CellDataset(root_dir=traindir, transform=transform)
+        val_dataset = CellDataset(root_dir=valdir, transform=transform)
+        
+        
+        if args.distributed:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        else:
+            train_sampler = None
+            
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+                                                   num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+                                                 num_workers=args.workers, pin_memory=True)
+
+    elif args.dataset == "hs91":
+        # using --data ./human_sperm_data/ --dataset hs91
+        
+        transform = transforms.Compose([
+            # image size: (96, 96)
+            transforms.Resize((96, 96)),  # 将所有图像调整为同一大小 (96, 96)
+            # transforms.RandomHorizontalFlip(),  # 随机水平翻转图像
+            # transforms.RandomVerticalFlip(),  # 随机垂直翻转图像
+            # transforms.RandomRotation(10),  # 在 (-10, 10) 范围内随机旋转图像
+            # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # 随机改变图像的亮度、对比度、饱和度和色相
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+        
+        # './cellData/train'
+        traindir = os.path.join(args.data, 'train')
+        # './cellData/val'
+        valdir = os.path.join(args.data, 'eval')
+
+        # create train/val dataset
+        train_dataset = CellDataset(root_dir=traindir, transform=transform)
+        val_dataset = CellDataset(root_dir=valdir, transform=transform)
+        
+        
+        if args.distributed:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        else:
+            train_sampler = None
+            
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+                                                   num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+                                                 num_workers=args.workers, pin_memory=True)
+
+    elif args.dataset == "sperm":
+        # using --data ./cellData/ --dataset sperm
         
         transform = transforms.Compose([
             # image size: (96, 96)
@@ -303,6 +422,11 @@ def main():
     if not os.path.exists(writer_dir):
         os.makedirs(writer_dir)
     writer = SummaryWriter(writer_dir)
+    
+    # create attention map save folder
+    att_map_folder = directory + "/attmap/"
+    if not os.path.exists(att_map_folder):
+        os.makedirs(att_map_folder)
 
     Loss_plot = {}
     train_prec1_plot = {}
@@ -318,7 +442,7 @@ def main():
 
         # train for one epoch
         # train(train_loader, model, criterion, optimizer, epoch)
-        loss_temp, train_prec1_temp, train_prec5_temp = train(train_loader, model, criterion, optimizer, epoch, writer)
+        loss_temp, train_prec1_temp, train_prec5_temp = train(train_loader, model, criterion, optimizer, epoch, writer, att_map_folder)
         Loss_plot[epoch] = loss_temp
         train_prec1_plot[epoch] = train_prec1_temp
         train_prec5_plot[epoch] = train_prec5_temp
@@ -362,7 +486,7 @@ def main():
         # scheduler.step()
 
 
-def train(train_loader, model, criterion, optimizer, epoch, writer):
+def train(train_loader, model, criterion, optimizer, epoch, writer, att_map_folder):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -386,11 +510,12 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
 
         # compute output
         output = model(input)
+        
         loss = criterion(output, target)
 
         # write loss in tensorboard
         writer.add_scalar('Training loss', loss.item(), epoch)
-
+        
         # measure accuracy and record loss
         prec1, prec5 = accuracy(output, target, topk=(1, 5))
         losses.update(loss.item(), input.size(0))
@@ -416,6 +541,51 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                 epoch, i, len(train_loader), batch_time=batch_time,
                 data_time=data_time, loss=losses, top1=top1, top5=top5))
+            
+        # save training epoech attention map
+        # Randomly select 10 images to visualize attention maps for hannet
+        if "hannet" in args.arch:
+            # 如果您想在每个epoch结束时打印特征图，请在此处添加代码
+            if i == len(train_loader) - 1:  # 检查是否为最后一个batch
+                # 假设我们想要可视化PSAModule的输出
+                # 将`visualize_feature_maps`设置为True以提取和可视化特征图
+                visualize_feature_maps = True  
+                if visualize_feature_maps:
+                    # 确保模型是在评估模式
+                    model.eval()
+                    
+                    # 正向传播来获取特征图
+                    with torch.no_grad():
+                        # 此处假设PSAModule是ResBlock的一部分并且我们使用了forward hooks
+                        activation = {}
+                        def get_activation(name):
+                            def hook(model, input, output):
+                                activation[name] = output.detach()
+                            return hook
+                        
+                        # 注册hook
+                        for name, m in model.named_modules():
+                            if isinstance(m, PSAModule):
+                                m.register_forward_hook(get_activation(name))
+                        
+                        # 正向传播获取特征图
+                        _ = model(input)
+
+                        # 为每个PSAModule可视化特征图
+                        for name, act in activation.items():
+                            # 选择一个特征图进行可视化
+                            feature_map = act[0]  # 假设我们只可视化batch中的第一个特征图
+                            
+                            # 选择特征图的通道
+                            for idx in range(feature_map.size(0)):
+                                # 可视化特征图
+                                plt.figure(figsize=(20, 10))
+                                plt.imshow(feature_map[idx].cpu().numpy(), cmap='hot')
+                                plt.colorbar()
+                                plt.title(f"{name} Feature Map at Epoch {epoch}, Channel {idx}")
+                                plt.savefig(f"{att_map_folder}/_{name}_FeatureMap_Epoch{epoch}_Channel{idx}.png")
+                                plt.close()  # 关闭图形，以免消耗过多资源
+                    model.train()  # 恢复训练模式
 
     return losses.avg, top1.avg, top5.avg
 
